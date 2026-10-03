@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-HK" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>倉頡速查典 - 粵語語音及手寫輸入</title>
+    
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="倉頡速查">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3898/3898082.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .dark .glass-effect {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        canvas { touch-action: none; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full flex flex-col transition-colors duration-200 select-none">
+
+    <!-- Header / Navigation Bar -->
+    <header class="sticky top-0 z-30 glass-effect border-b border-slate-200 dark:border-slate-800 transition-colors pt-safe">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('single')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-md shadow-brand-500/20">
+                    倉
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide">倉頡速查典</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">粵語語音 / 手寫輸入 / 倉頡碼拆解</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button id="darkModeToggle" onclick="toggleDarkMode()" class="p-2.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition" title="切換深色模式">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:inline"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6">
+        
+        <!-- Navigation Tabs -->
+        <div class="flex bg-slate-200/70 dark:bg-slate-800/80 p-1.5 rounded-2xl max-w-md mx-auto text-sm font-medium shadow-inner">
+            <button id="tab-single" onclick="switchTab('single')" class="flex-1 py-2 rounded-xl transition duration-150 flex items-center justify-center space-x-2 bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm">
+                <i class="fa-solid fa-search"></i>
+                <span>單字速查</span>
+            </button>
+            <button id="tab-batch" onclick="switchTab('batch')" class="flex-1 py-2 rounded-xl transition duration-150 flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-slate-900">
+                <i class="fa-solid fa-align-left"></i>
+                <span>批量轉換</span>
+            </button>
+            <button id="tab-cheatsheet" onclick="switchTab('cheatsheet')" class="flex-1 py-2 rounded-xl transition duration-150 flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-slate-900">
+                <i class="fa-solid fa-keyboard"></i>
+                <span>倉頡字母</span>
+            </button>
+            <button id="tab-history" onclick="switchTab('history')" class="flex-1 py-2 rounded-xl transition duration-150 flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-slate-900">
+                <i class="fa-solid fa-bookmark"></i>
+                <span>收藏歷史</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: Single Lookup -->
+        <section id="view-single" class="space-y-6">
+            <!-- Search Input Box -->
+            <div class="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="relative flex items-center">
+                    <input type="text" id="searchInput" placeholder="輸入中文單字或短語 (例如: 廣、粵語)..." 
+                        class="w-full pl-4 pr-32 py-3.5 bg-slate-100 dark:bg-slate-900 border-none rounded-xl text-lg font-medium focus:ring-2 focus:ring-brand-500 focus:bg-white dark:focus:bg-slate-900 transition outline-none"
+                        oninput="onSearchInput(this.value)" onkeydown="if(event.key==='Enter') doSearch()" />
+
+                    <div class="absolute right-2 flex items-center space-x-1">
+                        <!-- Cantonese Mic Button -->
+                        <button id="micBtn" onclick="toggleSpeechRecognition()" class="p-2.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800 transition" title="粵語語音輸入">
+                            <i class="fa-solid fa-microphone text-lg"></i>
+                        </button>
+                        <!-- Handwriting Canvas Toggle Button -->
+                        <button onclick="openHandwritingModal()" class="p-2.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800 transition" title="手寫輸入">
+                            <i class="fa-solid fa-pen-nib text-lg"></i>
+                        </button>
+                        <!-- Clear button -->
+                        <button onclick="clearSearch()" class="p-2.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Voice Recording Indicator -->
+                <div id="voiceStatus" class="hidden mt-3 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl flex items-center justify-between text-red-600 dark:text-red-400 text-sm">
+                    <div class="flex items-center space-x-2">
+                        <span class="relative flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                        <span id="voiceText">正在聆聽粵語...請說話</span>
+                    </div>
+                    <button onclick="stopSpeechRecognition()" class="text-xs font-semibold underline px-2 py-1">停止</button>
+                </div>
+            </div>
+
+            <!-- Quick Suggestions Row -->
+            <div class="flex items-center space-x-2 overflow-x-auto hide-scrollbar text-xs">
+                <span class="text-slate-400 dark:text-slate-500 shrink-0 font-medium">常用熱搜：</span>
+                <div id="quickTags" class="flex items-x space-x-2">
+                    <!-- Dynamic quick tags -->
+                </div>
+            </div>
+
+            <!-- Search Results Display Area -->
+            <div id="resultContainer" class="space-y-4">
+                <!-- Initial Empty State -->
+                <div id="emptyState" class="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                    <div class="w-16 h-16 bg-brand-50 dark:bg-slate-700 text-brand-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-keyboard"></i>
+                    </div>
+                    <h3 class="text-slate-700 dark:text-slate-200 font-bold text-lg mb-1">請輸入中文字詞查詢</h3>
+                    <p class="text-slate-400 dark:text-slate-500 text-sm max-w-sm mx-auto">
+                        可以透過鍵盤輸入、按 <i class="fa-solid fa-microphone text-brand-500"></i> 使用粵語語音，或按 <i class="fa-solid fa-pen-nib text-brand-500"></i> 進行手寫輸入。
+                    </p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-brand-500 border-t-transparent mb-3"></div>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">正在為您拆解倉頡碼...</p>
+                </div>
+
+                <!-- Single Character Card List -->
+                <div id="resultsList" class="space-y-4"></div>
+            </div>
+        </section>
+
+        <!-- TAB 2: Batch Text Lookup -->
+        <section id="view-batch" class="hidden space-y-6">
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-bold text-slate-800 dark:text-slate-200 text-lg flex items-center space-x-2">
+                        <i class="fa-solid fa-align-left text-brand-500"></i>
+                        <span>整句或整段文章倉頡碼解析</span>
+                    </h2>
+                    <button onclick="clearBatchText()" class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        清除文字
+                    </button>
+                </div>
+                
+                <textarea id="batchInput" rows="4" placeholder="粘貼或輸入整段中文內容（例如：香港粵語倉頡輸入法好方便...）" 
+                    class="w-full p-4 bg-slate-100 dark:bg-slate-900 border-none rounded-xl text-base focus:ring-2 focus:ring-brand-500 outline-none resize-y"></textarea>
+
+                <div class="flex justify-end space-x-3">
+                    <button onclick="processBatchText()" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl shadow-md transition flex items-center space-x-2">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>開始整句拆碼</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Batch Result Grid -->
+            <div id="batchResults" class="hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                    <h3 class="font-bold text-slate-700 dark:text-slate-300">逐字拆碼結果</h3>
+                    <button onclick="copyBatchResults()" class="text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 transition flex items-center space-x-1">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>複製全部倉頡碼</span>
+                    </button>
+                </div>
+
+                <div id="batchGrid" class="flex flex-wrap gap-2 sm:gap-3">
+                    <!-- Dynamic elements for characters -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: Cangjie Keyboard Cheatsheet -->
+        <section id="view-cheatsheet" class="hidden space-y-6">
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-slate-800 dark:text-slate-200 text-lg">倉頡二十四字母與四大類對照表</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">點擊字母卡片可快速查詢該字根說明</p>
+                    </div>
+                </div>
+
+                <!-- Keyboard Layout Visualizer -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" id="cheatsheetGrid">
+                    <!-- Dynamic rendering of 24 roots -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: History & Favorites -->
+        <section id="view-history" class="hidden space-y-6">
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                    <h2 class="font-bold text-slate-800 dark:text-slate-200 text-lg flex items-center space-x-2">
+                        <i class="fa-solid fa-star text-amber-400"></i>
+                        <span>已收藏字詞</span>
+                    </h2>
+                    <button onclick="clearFavorites()" class="text-xs text-slate-400 hover:text-red-500 transition">清空收藏</button>
+                </div>
+                <div id="favoritesList" class="flex flex-wrap gap-2">
+                    <p class="text-slate-400 text-sm py-4">暫無收藏字詞。點擊查詢結果的星號即可收藏！</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                    <h2 class="font-bold text-slate-800 dark:text-slate-200 text-lg flex items-center space-x-2">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-400"></i>
+                        <span>最近搜尋紀錄</span>
+                    </h2>
+                    <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-red-500 transition">清空紀錄</button>
+                </div>
+                <div id="historyList" class="flex flex-wrap gap-2">
+                    <p class="text-slate-400 text-sm py-4">暫無搜尋紀錄。</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Handwriting Recognition Drawer/Canvas -->
+    <div id="handwritingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full p-5 space-y-4 transform scale-95 transition-transform duration-200" id="handwritingCard">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="p-2 bg-brand-50 dark:bg-slate-700 text-brand-600 dark:text-brand-400 rounded-xl">
+                        <i class="fa-solid fa-pen-nib"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200">手寫輸入識別</h3>
+                        <p class="text-xs text-slate-400">請在下方劃板寫出中文單字</p>
+                    </div>
+                </div>
+                <button onclick="closeHandwritingModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Candidate Bar from Handwriting Recognition -->
+            <div class="min-h-[44px] bg-slate-50 dark:bg-slate-900/60 rounded-xl p-2 flex items-center space-x-2 overflow-x-auto hide-scrollbar border border-slate-200/60 dark:border-slate-700/60">
+                <span class="text-xs text-slate-400 shrink-0 px-1">辨識候選：</span>
+                <div id="handwritingCandidates" class="flex items-center space-x-2">
+                    <span class="text-xs text-slate-400 italic">在劃板寫字後自動識別...</span>
+                </div>
+            </div>
+
+            <!-- Canvas Drawing Board -->
+            <div class="relative bg-slate-50 dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner flex justify-center items-center aspect-square">
+                <!-- Grid background lines -->
+                <div class="absolute inset-0 pointer-events-none opacity-20 border border-slate-400 flex flex-col justify-between">
+                    <div class="w-full h-1/2 border-b border-dashed border-slate-500"></div>
+                </div>
+                <div class="absolute inset-0 pointer-events-none opacity-20 flex justify-between">
+                    <div class="h-full w-1/2 border-r border-dashed border-slate-500"></div>
+                </div>
+
+                <canvas id="handwritingCanvas" class="w-full h-full cursor-crosshair z-10"></canvas>
+
+                <!-- Recognition status overlay inside canvas -->
+                <div id="hwRecognizing" class="hidden absolute inset-0 bg-white/70 dark:bg-slate-900/70 z-20 flex flex-col items-center justify-center space-y-2">
+                    <i class="fa-solid fa-spinner animate-spin text-2xl text-brand-600"></i>
+                    <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">AI 智能識別中...</span>
+                </div>
+            </div>
+
+            <!-- Controls: Clear, Undo, Confirm -->
+            <div class="flex items-center justify-between pt-1">
+                <div class="flex space-x-2">
+                    <button onclick="clearCanvas()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-medium transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>重寫</span>
+                    </button>
+                </div>
+                <button onclick="recognizeCanvasStroke()" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-medium shadow-md transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>立即辨識</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center space-x-3 transition-all duration-300 transform translate-y-20 opacity-0">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMsg" class="text-sm font-medium">已複製到剪貼簿</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-6 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200 dark:border-slate-800">
+        <p>倉頡輸入法速查字典 &copy; 2026 | 支援三代/五代倉頡拆碼與粵語發音</p>
+    </footer>
+
+    <script>
+        // Cangjie Key mapping dictionary (24 Primary Cangjie Keys + X + Z)
+        const CANGJIE_KEY_MAP = {
+            'A': { name: '日', category: '哲理類' },
+            'B': { name: '月', category: '哲理類' },
+            'C': { name: '金', category: '哲理類' },
+            'D': { name: '木', category: '哲理類' },
+            'E': { name: '水', category: '哲理類' },
+            'F': { name: '火', category: '哲理類' },
+            'G': { name: '土', category: '哲理類' },
+            'H': { name: '竹', category: '筆劃類' },
+            'I': { name: '戈', category: '筆劃類' },
+            'J': { name: '十', category: '筆劃類' },
+            'K': { name: '大', category: '筆劃類' },
+            'L': { name: '中', category: '筆劃類' },
+            'M': { name: '一', category: '筆劃類' },
+            'N': { name: '弓', category: '筆劃類' },
+            'O': { name: '人', category: '人身類' },
+            'P': { name: '心', category: '人身類' },
+            'Q': { name: '手', category: '人身類' },
+            'R': { name: '口', category: '人身類' },
+            'S': { name: '尸', category: '字形類' },
+            'T': { name: '山', category: '字形類' },
+            'U': { name: '女', category: '字形類' },
+            'V': { name: '田', category: '字形類' },
+            'W': { name: '田', category: '字形類' },
+            'Y': { name: '卜', category: '字形類' },
+            'X': { name: '難', category: '特殊類' },
+            'Z': { name: '重', category: '特殊類' }
+        };
+
+        // Rich embedded local dictionary for high-frequency Traditional Chinese characters
+        const LOCAL_DICT = {
+            '倉': { code: 'OIAR', jyutping: 'cong1', pinyin: 'cāng', breakdown: '人+戈+日+口' },
+            '頡': { code: 'GROBC', jyutping: 'git3', pinyin: 'jié', breakdown: '土+口+月+卜+金' },
+            '廣': { code: 'ITAC', jyutping: 'gwong2', pinyin: 'guǎng', breakdown: '戈+廿+日+金' },
+            '東': { code: 'DWD', jyutping: 'dung1', pinyin: 'dōng', breakdown: '木+田+木' },
+            '話': { code: 'YRHJR', jyutping: 'waa6', pinyin: 'huà', breakdown: '卜+口+竹+十+口' },
+            '港': { code: 'ETHC', jyutping: 'gong2', pinyin: 'gǎng', breakdown: '水+廿+竹+金' },
+            '香': { code: 'HDA', jyutping: 'hoeng1', pinyin: 'xiāng', breakdown: '竹+大+日' },
+            '愛': { code: 'BBECE', jyutping: 'oi3', pinyin: 'ài', breakdown: '月+月+水+金+水' },
+            '好': { code: 'VND', jyutping: 'hou2', pinyin: 'hǎo', breakdown: '女+弓+木' },
+            '我': { code: 'HQI', jyutping: 'ngo5', pinyin: 'wǒ', breakdown: '竹+手+戈' },
+            '你': { code: 'ONFI', jyutping: 'nei5', pinyin: 'nǐ', breakdown: '人+弓+火+戈' },
+            '佢': { code: 'OSS', jyutping: 'keoi5', pinyin: 'qú', breakdown: '人+尸+尸' },
+            '水': { code: 'E', jyutping: 'seoi2', pinyin: 'shuǐ', breakdown: '水' },
+            '木': { code: 'D', jyutping: 'muk6', pinyin: 'mù', breakdown: '木' },
+            '金': { code: 'OPC', jyutping: 'gam1', pinyin: 'jīn', breakdown: '人+心+金' },
+            '火': { code: 'F', jyutping: 'fo2', pinyin: 'huǒ', breakdown: '火' },
+            '土': { code: 'G', jyutping: 'tou2', pinyin: 'tǔ', breakdown: '土' },
+            '日': { code: 'A', jyutping: 'jat6', pinyin: 'rì', breakdown: '日' },
+            '月': { code: 'B', jyutping: 'jyut6', pinyin: 'yuè', breakdown: '月' },
+            '人': { code: 'O', jyutping: 'jan4', pinyin: 'rén', breakdown: '人' },
+            '心': { code: 'P', jyutping: 'sam1', pinyin: 'xīn', breakdown: '心' },
+            '手': { code: 'Q', jyutping: 'sau2', pinyin: 'shǒu', breakdown: '手' },
+            '口': { code: 'R', jyutping: 'hau2', pinyin: 'kǒu', breakdown: '口' },
+            '中': { code: 'L', jyutping: 'zung1', pinyin: 'zhōng', breakdown: '中' },
+            '文': { code: 'YK', jyutping: 'man4', pinyin: 'wén', breakdown: '卜+大' },
+            '國': { code: 'WIRM', jyutping: 'gwok3', pinyin: 'guó', breakdown: '田+戈+口+一' },
+            '龍': { code: 'YBPBP', jyutping: 'lung4', pinyin: 'lóng', breakdown: '卜+月+心+月+心' },
+            '鳳': { code: 'HNMNF', jyutping: 'fung6', pinyin: 'fèng', breakdown: '竹+弓+一+弓+火' },
+            '粵': { code: 'HBMMV', jyutping: 'jyut6', pinyin: 'yuè', breakdown: '竹+月+一+一+女' },
+            '學': { code: 'HBND', jyutping: 'hok6', pinyin: 'xué', breakdown: '竹+月+弓+木' },
+            '寫': { code: 'JHBX', jyutping: 'se2', pinyin: 'xiě', breakdown: '十+竹+月+難' },
+            '字': { code: 'JND', jyutping: 'zi6', pinyin: 'zì', breakdown: '十+弓+木' },
+            '鍵': { code: 'CNKQ', jyutping: 'gin6', pinyin: 'jiàn', breakdown: '金+弓+K+手' },
+            '盤': { code: 'REVOT', jyutping: 'pun4', pinyin: 'pán', breakdown: '口+水+女+人+皿' },
+            '試': { code: 'YRPYM', jyutping: 'si3', pinyin: 'shì', breakdown: '卜+口+心+卜+一' },
+            '驗': { code: 'CFFR', jyutping: 'jim6', pinyin: 'yàn', breakdown: '馬+火+火+口' },
+            '測': { code: 'EBCI', jyutping: 'cak1', pinyin: 'cè', breakdown: '水+月+金+戈' }
+        };
+
+        const QUICK_TAGS = ['廣', '粵', '倉', '頡', '龍', '愛', '學', '港', '寫'];
+
+        let currentTab = 'single';
+        let historyItems = JSON.parse(localStorage.getItem('cj_history') || '[]');
+        let favoriteItems = JSON.parse(localStorage.getItem('cj_favorites') || '[]');
+        let speechRecognition = null;
+        let isRecording = false;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initQuickTags();
+            initCheatsheetGrid();
+            initHandwritingCanvas();
+            renderFavoritesAndHistory();
+
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            lookupCharacter('廣');
+        });
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            ['single', 'batch', 'cheatsheet', 'history'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const view = document.getElementById(`view-${t}`);
+                if (t === tab) {
+                    btn.className = "flex-1 py-2 rounded-xl transition duration-150 flex items-center justify-center space-x-2 bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm font-semibold";
+                    view.classList.remove('hidden');
+                } else {
+                    btn.className = "flex-1 py-2 rounded-xl transition duration-150 flex items-center justify-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-slate-900";
+                    view.classList.add('hidden');
+                }
+            });
+
+            if (tab === 'history') {
+                renderFavoritesAndHistory();
+            }
+        }
+
+        function toggleSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                showToast('您的瀏覽器不支援語音辨識服務', 'error');
+                return;
+            }
+
+            if (isRecording) {
+                stopSpeechRecognition();
+                return;
+            }
+
+            speechRecognition = new SpeechRecognition();
+            speechRecognition.lang = 'zh-HK';
+            speechRecognition.continuous = false;
+            speechRecognition.interimResults = false;
+
+            speechRecognition.onstart = () => {
+                isRecording = true;
+                document.getElementById('micBtn').classList.add('text-red-500', 'animate-pulse');
+                document.getElementById('voiceStatus').classList.remove('hidden');
+            };
+
+            speechRecognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript.trim();
+                if (transcript) {
+                    document.getElementById('searchInput').value = transcript;
+                    lookupCharacter(transcript);
+                    showToast(`已辨識粵語: ${transcript}`, 'success');
+                }
+                stopSpeechRecognition();
+            };
+
+            speechRecognition.onerror = (err) => {
+                console.error("Speech error:", err);
+                showToast('語音識別超時或失敗，請重試', 'error');
+                stopSpeechRecognition();
+            };
+
+            speechRecognition.onend = () => {
+                stopSpeechRecognition();
+            };
+
+            speechRecognition.start();
+        }
+
+        function stopSpeechRecognition() {
+            if (speechRecognition) {
+                speechRecognition.stop();
+                speechRecognition = null;
+            }
+            isRecording = false;
+            document.getElementById('micBtn').classList.remove('text-red-500', 'animate-pulse');
+            document.getElementById('voiceStatus').classList.add('hidden');
+        }
+
+        function initQuickTags() {
+            const container = document.getElementById('quickTags');
+            container.innerHTML = QUICK_TAGS.map(char => `
+                <button onclick="lookupCharacter('${char}')" class="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 rounded-lg text-slate-700 dark:text-slate-300 font-medium transition">
+                    ${char}
+                </button>
+            `).join('');
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchInput').focus();
+        }
+
+        function onSearchInput(val) {
+            if (val.trim()) {
+                lookupCharacter(val.trim());
+            }
+        }
+
+        function doSearch() {
+            const val = document.getElementById('searchInput').value.trim();
+            if (val) {
+                lookupCharacter(val);
+            }
+        }
+
+        async function lookupCharacter(query) {
+            if (!query) return;
+
+            saveToHistory(query);
+
+            const emptyState = document.getElementById('emptyState');
+            const loadingState = document.getElementById('loadingState');
+            const resultsList = document.getElementById('resultsList');
+
+            emptyState.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            resultsList.innerHTML = '';
+
+            const chars = Array.from(new Set(query.replace(/[^\u4e00-\u9fa5]/g, '').split('')));
+
+            if (chars.length === 0) {
+                loadingState.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            const results = [];
+            for (const char of chars) {
+                let data = LOCAL_DICT[char];
+                if (!data) {
+                    data = await fetchCangjieFromGemini(char);
+                }
+                if (data) {
+                    results.push({ char, ...data });
+                }
+            }
+
+            loadingState.classList.add('hidden');
+
+            if (results.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            resultsList.innerHTML = results.map(item => renderCharacterCard(item)).join('');
+        }
+
+        function renderCharacterCard(item) {
+            const isFav = favoriteItems.includes(item.char);
+            const codes = item.code.split('');
+
+            const keyBadges = codes.map(c => {
+                const info = CANGJIE_KEY_MAP[c] || { name: c, category: '' };
+                return `
+                    <div class="flex flex-col items-center bg-brand-50 dark:bg-slate-700/60 border border-brand-200 dark:border-slate-600 rounded-xl px-3 py-2">
+                        <span class="text-xl font-black text-brand-600 dark:text-brand-300 leading-none">${info.name}</span>
+                        <span class="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 mt-1">${c}</span>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition space-y-4">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-2xl border border-slate-300/50 dark:border-slate-600 flex items-center justify-center text-4xl font-black text-slate-900 dark:text-slate-100 shadow-inner">
+                                ${item.char}
+                            </div>
+                            
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-semibold px-2 py-0.5 bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 rounded-md">五代/三代倉頡</span>
+                                    <button onclick="speakCantonese('${item.char}')" class="text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition" title="朗讀粵語發音">
+                                        <i class="fa-solid fa-volume-high text-sm"></i>
+                                    </button>
+                                </div>
+                                <div class="mt-1 flex items-center space-x-3 text-sm text-slate-500 dark:text-slate-400">
+                                    <span>粵拼: <strong class="text-slate-800 dark:text-slate-200 font-medium">${item.jyutping || '-'}</strong></span>
+                                    <span>拼音: <strong class="text-slate-800 dark:text-slate-200 font-medium">${item.pinyin || '-'}</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            <button onclick="toggleFavorite('${item.char}')" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition" title="收藏單字">
+                                <i class="fa-solid fa-star ${isFav ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'}"></i>
+                            </button>
+                            <button onclick="copyToClipboard('${item.code}', '倉頡碼 ${item.code}')" class="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-xl font-medium text-xs transition flex items-center space-x-1.5">
+                                <i class="fa-regular fa-copy"></i>
+                                <span>複製碼: ${item.code}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3.5 border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center space-x-2 overflow-x-auto hide-scrollbar">
+                            <span class="text-xs font-medium text-slate-400 shrink-0">倉頡字根:</span>
+                            <div class="flex items-center space-x-2">
+                                ${keyBadges}
+                            </div>
+                        </div>
+
+                        <div class="text-right sm:border-l border-slate-200 dark:border-slate-700 sm:pl-4">
+                            <span class="text-xs text-slate-400 block">字形拆解</span>
+                            <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">${item.breakdown || codes.map(c => CANGJIE_KEY_MAP[c]?.name || c).join('+')}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function fetchCangjieFromGemini(character) {
+            const systemPrompt = "You are an expert Traditional Chinese Cangjie dictionary engine. Return precise Cangjie (5th/3rd generation) codes and Cantonese Jyutping for the requested character.";
+            const userQuery = `Provide Cangjie input code for Traditional Chinese character "${character}". Return pure JSON format: { "code": "ABC", "jyutping": "jyut", "pinyin": "pin", "breakdown": "日+月" }`;
+            
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (jsonText) {
+                    return JSON.parse(jsonText);
+                }
+            } catch (err) {
+                console.error("Gemini API Error:", err);
+            }
+
+            return { code: '???', jyutping: '', pinyin: '', breakdown: '未有資料' };
+        }
+
+        let hwCanvas, hwCtx;
+        let isDrawing = false;
+
+        function initHandwritingCanvas() {
+            hwCanvas = document.getElementById('handwritingCanvas');
+            hwCtx = hwCanvas.getContext('2d');
+
+            hwCanvas.width = 300;
+            hwCanvas.height = 300;
+
+            hwCtx.strokeStyle = document.documentElement.classList.contains('dark') ? '#f8fafc' : '#0f172a';
+            hwCtx.lineWidth = 10;
+            hwCtx.lineCap = 'round';
+            hwCtx.lineJoin = 'round';
+
+            const startDraw = (x, y) => {
+                isDrawing = true;
+                hwCtx.beginPath();
+                hwCtx.moveTo(x, y);
+            };
+
+            const drawMove = (x, y) => {
+                if (!isDrawing) return;
+                hwCtx.lineTo(x, y);
+                hwCtx.stroke();
+            };
+
+            const stopDraw = () => {
+                if (isDrawing) {
+                    isDrawing = false;
+                    debouncedRecognize();
+                }
+            };
+
+            hwCanvas.addEventListener('mousedown', (e) => {
+                const rect = hwCanvas.getBoundingClientRect();
+                startDraw(e.clientX - rect.left, e.clientY - rect.top);
+            });
+            hwCanvas.addEventListener('mousemove', (e) => {
+                const rect = hwCanvas.getBoundingClientRect();
+                drawMove(e.clientX - rect.left, e.clientY - rect.top);
+            });
+            window.addEventListener('mouseup', stopDraw);
+
+            hwCanvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const rect = hwCanvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                startDraw(touch.clientX - rect.left, touch.clientY - rect.top);
+            });
+            hwCanvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const rect = hwCanvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                drawMove(touch.clientX - rect.left, touch.clientY - rect.top);
+            });
+            hwCanvas.addEventListener('touchend', stopDraw);
+        }
+
+        function clearCanvas() {
+            hwCtx.clearRect(0, 0, hwCanvas.width, hwCanvas.height);
+            document.getElementById('handwritingCandidates').innerHTML = '<span class="text-xs text-slate-400 italic">在劃板寫字後自動識別...</span>';
+        }
+
+        let recogTimeout;
+        function debouncedRecognize() {
+            clearTimeout(recogTimeout);
+            recogTimeout = setTimeout(() => {
+                recognizeCanvasStroke();
+            }, 800);
+        }
+
+        async function recognizeCanvasStroke() {
+            const overlay = document.getElementById('hwRecognizing');
+            overlay.classList.remove('hidden');
+
+            try {
+                const dataUrl = hwCanvas.toDataURL('image/png');
+                const base64Data = dataUrl.split(',')[1];
+
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: "Recognize the single handwritten Traditional Chinese character in this canvas image. Return JSON with top 5 candidates array: { \"candidates\": [\"字1\", \"字2\", \"字3\", \"字4\", \"字5\"] }" },
+                                {
+                                    inlineData: {
+                                        mimeType: "image/png",
+                                        data: base64Data
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (part) {
+                    const parsed = JSON.parse(part);
+                    if (parsed.candidates && parsed.candidates.length > 0) {
+                        renderHandwritingCandidates(parsed.candidates);
+                    }
+                }
+            } catch (err) {
+                console.error("Handwriting API error:", err);
+            } finally {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function renderHandwritingCandidates(candidates) {
+            const container = document.getElementById('handwritingCandidates');
+            container.innerHTML = candidates.map(char => `
+                <button onclick="selectHandwrittenChar('${char}')" class="px-3 py-1 bg-brand-50 hover:bg-brand-600 hover:text-white dark:bg-slate-700 dark:hover:bg-brand-600 text-brand-700 dark:text-brand-300 font-bold text-lg rounded-xl transition shadow-sm">
+                    ${char}
+                </button>
+            `).join('');
+        }
+
+        function selectHandwrittenChar(char) {
+            document.getElementById('searchInput').value = char;
+            closeHandwritingModal();
+            lookupCharacter(char);
+        }
+
+        function openHandwritingModal() {
+            const modal = document.getElementById('handwritingModal');
+            const card = document.getElementById('handwritingCard');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                card.classList.remove('scale-95');
+                card.classList.add('scale-100');
+            }, 10);
+            clearCanvas();
+        }
+
+        function closeHandwritingModal() {
+            const modal = document.getElementById('handwritingModal');
+            const card = document.getElementById('handwritingCard');
+            modal.classList.add('opacity-0');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        async function processBatchText() {
+            const text = document.getElementById('batchInput').value.trim();
+            if (!text) return;
+
+            const grid = document.getElementById('batchGrid');
+            const container = document.getElementById('batchResults');
+            
+            grid.innerHTML = '<div class="w-full py-8 text-center"><i class="fa-solid fa-spinner animate-spin text-2xl text-brand-500"></i></div>';
+            container.classList.remove('hidden');
+
+            const chars = Array.from(text);
+            const htmlPromises = chars.map(async (char) => {
+                if (!/[\u4e00-\u9fa5]/.test(char)) {
+                    return `
+                        <div class="flex flex-col items-center bg-slate-100 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 min-w-[52px]">
+                            <span class="text-xl font-bold text-slate-400">${char}</span>
+                            <span class="text-xs text-slate-400 font-mono mt-1">-</span>
+                        </div>
+                    `;
+                }
+
+                let data = LOCAL_DICT[char];
+                if (!data) {
+                    data = await fetchCangjieFromGemini(char);
+                }
+
+                const codeStr = data ? data.code : '???';
+                return `
+                    <div onclick="lookupCharacter('${char}'); switchTab('single');" class="cursor-pointer hover:border-brand-500 flex flex-col items-center bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 min-w-[56px] transition group">
+                        <span class="text-xl font-black text-slate-800 dark:text-slate-100 group-hover:text-brand-600">${char}</span>
+                        <span class="text-xs font-mono font-bold text-brand-600 dark:text-brand-400 mt-1">${codeStr}</span>
+                    </div>
+                `;
+            });
+
+            const htmlArray = await Promise.all(htmlPromises);
+            grid.innerHTML = htmlArray.join('');
+        }
+
+        function clearBatchText() {
+            document.getElementById('batchInput').value = '';
+            document.getElementById('batchResults').classList.add('hidden');
+        }
+
+        function copyBatchResults() {
+            const items = document.querySelectorAll('#batchGrid .font-mono');
+            const codes = Array.from(items).map(el => el.textContent).join(' ');
+            copyToClipboard(codes, '整句倉頡碼已複製');
+        }
+
+        function initCheatsheetGrid() {
+            const grid = document.getElementById('cheatsheetGrid');
+            grid.innerHTML = Object.entries(CANGJIE_KEY_MAP).map(([key, val]) => `
+                <div onclick="lookupCharacter('${val.name}'); switchTab('single');" class="cursor-pointer bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 p-3.5 rounded-2xl hover:border-brand-500 dark:hover:border-brand-500 transition shadow-sm group">
+                    <div class="flex items-center justify-between">
+                        <span class="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-brand-600">${val.name}</span>
+                        <span class="text-xs font-mono px-2 py-0.5 bg-brand-100 dark:bg-slate-700 text-brand-700 dark:text-brand-300 font-bold rounded-lg">${key}</span>
+                    </div>
+                    <span class="text-[11px] text-slate-400 mt-2 block">${val.category}</span>
+                </div>
+            `).join('');
+        }
+
+        function speakCantonese(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-HK';
+                window.speechSynthesis.speak(utterance);
+            } else {
+                showToast('您的瀏覽器不支援朗讀功能', 'error');
+            }
+        }
+
+        function saveToHistory(query) {
+            if (!query) return;
+            historyItems = [query, ...historyItems.filter(item => item !== query)].slice(0, 20);
+            localStorage.setItem('cj_history', JSON.stringify(historyItems));
+        }
+
+        function toggleFavorite(char) {
+            if (favoriteItems.includes(char)) {
+                favoriteItems = favoriteItems.filter(c => c !== char);
+                showToast(`已從收藏移除 ${char}`);
+            } else {
+                favoriteItems.push(char);
+                showToast(`已收藏單字 ${char}`);
+            }
+            localStorage.setItem('cj_favorites', JSON.stringify(favoriteItems));
+            lookupCharacter(char);
+        }
+
+        function renderFavoritesAndHistory() {
+            const favContainer = document.getElementById('favoritesList');
+            const histContainer = document.getElementById('historyList');
+
+            if (favoriteItems.length === 0) {
+                favContainer.innerHTML = '<p class="text-slate-400 text-sm py-2">暫無收藏字詞。點擊查詢結果的星號即可收藏！</p>';
+            } else {
+                favContainer.innerHTML = favoriteItems.map(char => `
+                    <button onclick="lookupCharacter('${char}'); switchTab('single');" class="px-3.5 py-2 bg-amber-50 dark:bg-slate-700 border border-amber-200 dark:border-slate-600 hover:border-amber-400 rounded-xl font-bold text-amber-800 dark:text-amber-300 text-base shadow-sm transition">
+                        ${char}
+                    </button>
+                `).join('');
+            }
+
+            if (historyItems.length === 0) {
+                histContainer.innerHTML = '<p class="text-slate-400 text-sm py-2">暫無搜尋紀錄。</p>';
+            } else {
+                histContainer.innerHTML = historyItems.map(item => `
+                    <button onclick="lookupCharacter('${item}'); switchTab('single');" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-200 text-sm transition">
+                        ${item}
+                    </button>
+                `).join('');
+            }
+        }
+
+        function clearFavorites() {
+            favoriteItems = [];
+            localStorage.removeItem('cj_favorites');
+            renderFavoritesAndHistory();
+            showToast('已清空所有收藏');
+        }
+
+        function clearHistory() {
+            historyItems = [];
+            localStorage.removeItem('cj_history');
+            renderFavoritesAndHistory();
+            showToast('已清空搜尋紀錄');
+        }
+
+        function copyToClipboard(text, msg = '已複製到剪貼簿') {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast(msg);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = message;
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-red-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
